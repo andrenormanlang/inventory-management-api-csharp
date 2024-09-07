@@ -53,6 +53,21 @@ namespace InventoryManagementSystem.Controllers
             return NoContent();
         }
 
+        // New endpoint to post suppliers in bulk
+        [HttpPost("bulk")]
+        public async Task<ActionResult> PostSuppliersBulk(List<Supplier> suppliers)
+        {
+            if (suppliers == null || suppliers.Count == 0)
+            {
+                return BadRequest("The supplier list cannot be empty.");
+            }
+
+            _context.Suppliers.AddRange(suppliers);
+            await _context.SaveChangesAsync();
+
+            return Ok($"Successfully added {suppliers.Count} suppliers.");
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSupplier(int id)
         {

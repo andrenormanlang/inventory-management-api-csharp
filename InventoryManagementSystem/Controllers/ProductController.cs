@@ -82,6 +82,51 @@ namespace InventoryManagementSystem.Controllers
             return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
         }
 
+        // POST: api/products/bulk
+        [HttpPost("bulk")]
+        public async Task<ActionResult<IEnumerable<Product>>> PostProductsInBulk(IEnumerable<ProductDto> productDtos)
+        {
+            var products = new List<Product>();
+
+            foreach (var productDto in productDtos)
+            {
+                // Fetch the Category and Supplier based on the provided IDs
+                var category = await _context.Categories.FindAsync(productDto.CategoryId);
+                var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
+
+                if (category == null)
+                {
+                    return BadRequest($"Invalid Category ID: {productDto.CategoryId}");
+                }
+
+                if (supplier == null)
+                {
+                    return BadRequest($"Invalid Supplier ID: {productDto.SupplierId}");
+                }
+
+                // Map DTO to Product entity
+                var product = new Product
+                {
+                    Name = productDto.Name,
+                    Price = productDto.Price,
+                    Quantity = productDto.Quantity,
+                    CategoryId = productDto.CategoryId,
+                    SupplierId = productDto.SupplierId,
+                    Category = category,
+                    Supplier = supplier
+                };
+
+                products.Add(product);
+            }
+
+            // Add the products and save changes in one transaction
+            _context.Products.AddRange(products);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProducts), products);
+        }
+
+
 
         // PUT: api/products/{id}
         [HttpPut("{id}")]

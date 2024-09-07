@@ -42,6 +42,20 @@ namespace InventoryManagementSystem.Controllers
             return CreatedAtAction(nameof(GetCategory), new { id = category.CategoryId }, category);
         }
 
+        [HttpPost("bulk")]
+        public async Task<ActionResult> PostCategoriesBulk(List<Category> categories)
+        {
+            if (categories == null || categories.Count == 0)
+            {
+                return BadRequest("The category list cannot be empty.");
+            }
+
+            _context.Categories.AddRange(categories);
+            await _context.SaveChangesAsync();
+
+            return Ok($"Successfully added {categories.Count} categories.");
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCategory(int id, Category category)
         {
