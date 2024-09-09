@@ -19,13 +19,19 @@ namespace InventoryManagementSystem.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Supplier>>> GetSuppliers()
         {
-            return await _context.Suppliers.ToListAsync();
+            // Include products with suppliers
+            return await _context.Suppliers
+                                 .Include(s => s.Products)
+                                 .ToListAsync();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Supplier>> GetSupplier(int id)
         {
-            var supplier = await _context.Suppliers.FindAsync(id);
+            // Include products when fetching a specific supplier
+            var supplier = await _context.Suppliers
+                                         .Include(s => s.Products)
+                                         .FirstOrDefaultAsync(s => s.Id == id);
             if (supplier == null)
             {
                 return NotFound();
