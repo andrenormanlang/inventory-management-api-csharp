@@ -41,6 +41,17 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
 });
 
+// Enable CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowBlazorClient", policy =>
+    {
+        policy.WithOrigins("https://localhost:7281") // Blazor app URL
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Swagger/OpenAPI configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -75,6 +86,10 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// Enable CORS
+app.UseCors("AllowBlazorClient");
+
 app.UseRouting();
 app.UseAuthorization();
 app.MapControllers();
