@@ -92,6 +92,7 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
             var product = new Product
             {
                 Name = productDto.Name,
+                Description = productDto.Description,
                 Price = productDto.Price,
                 Quantity = productDto.Quantity,
                 CategoryId = productDto.CategoryId,
@@ -133,6 +134,7 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
                 var product = new Product
                 {
                     Name = productDto.Name,
+                    Description = productDto.Description,
                     Price = productDto.Price,
                     Quantity = productDto.Quantity,
                     CategoryId = productDto.CategoryId,
@@ -185,6 +187,7 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
 
             // Update product fields
             product.Name = productDto.Name;
+            product.Description = productDto.Description;
             product.Price = productDto.Price;
             product.Quantity = productDto.Quantity;
             product.CategoryId = productDto.CategoryId;
@@ -210,6 +213,50 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
 
             return NoContent();
         }
+
+        // PUT: api/products/bulk-update
+        [HttpPut("bulk-update")]
+        public async Task<IActionResult> UpdateProductsInBulk(IEnumerable<ProductDto> productDtos)
+        {
+            var ids = productDtos.Select(p => p.ProductId).ToList();
+            var productsToUpdate = await _context.Products
+                .Where(p => ids.Contains(p.ProductId))
+                .ToListAsync();
+
+            if (productsToUpdate.Count != productDtos.Count())
+            {
+                return BadRequest("Some product IDs did not match any existing products.");
+            }
+
+            foreach (var productDto in productDtos)
+            {
+                var product = productsToUpdate.FirstOrDefault(p => p.ProductId == productDto.ProductId);
+                if (product != null)
+                {
+                    product.Name = productDto.Name;
+                    product.Description = productDto.Description;
+                    product.Price = productDto.Price;
+                    product.Quantity = productDto.Quantity;
+                    product.CategoryId = productDto.CategoryId;
+                    product.SupplierId = productDto.SupplierId;
+                    // Update other fields as necessary
+                }
+            }
+
+            _context.Products.UpdateRange(productsToUpdate);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                return BadRequest($"Failed to update products: {ex.Message}");
+            }
+
+            return NoContent(); // or return Ok() if you prefer to send a response back
+        }
+
 
 
         // DELETE: api/products/{id}
