@@ -28,6 +28,7 @@ namespace InventoryManagementSystem.Controllers
                 {
                     ProductId = p.ProductId,
                     Name = p.Name,
+                    Description = p.Description,
                     Price = p.Price,
                     Quantity = p.Quantity,
                     CategoryId = p.CategoryId,
@@ -51,6 +52,7 @@ namespace InventoryManagementSystem.Controllers
                 {
                     ProductId = p.ProductId,
                     Name = p.Name,
+                    Description = p.Description,
                     Price = p.Price,
                     Quantity = p.Quantity,
                     CategoryId = p.CategoryId,
