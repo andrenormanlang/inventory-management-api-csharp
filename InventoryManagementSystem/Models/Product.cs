@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace InventoryManagementSystem.Models
 {
     public class Product
@@ -11,11 +13,15 @@ namespace InventoryManagementSystem.Models
         // Foreign key to Category
         public int CategoryId { get; set; }
         public Category Category { get; set; }
+
+        [NotMapped]
         public string CategoryName { get; set; }
 
         // Foreign key to Supplier
         public int SupplierId { get; set; }
         public Supplier Supplier { get; set; }
+        
+        [NotMapped]
         public string SupplierName { get; set; }
     }
 }

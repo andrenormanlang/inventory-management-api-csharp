@@ -17,35 +17,33 @@ namespace InventoryManagementSystem.Controllers
             _context = context;
         }
 
-        // GET: api/products
+        // GET: api/products - Retrieve all products with category and supplier names
         [HttpGet]
-public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
-{
-    // Include both Category and Supplier relationships and map to ProductDto
-    var products = await _context.Products
-        .Include(p => p.Category)
-        .Include(p => p.Supplier)
-        .Select(p => new Product
+        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
-            ProductId = p.ProductId,
-            Name = p.Name,
-            Price = p.Price,
-            Quantity = p.Quantity,
-            CategoryId = p.CategoryId,
-            SupplierId = p.SupplierId,
-            // You can extend DTOs with extra details, such as category or supplier names if needed.
-            CategoryName = p.Category.Name,
-            SupplierName = p.Supplier.Name
-        })
-        .ToListAsync();
+            var products = await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Supplier)
+                .Select(p => new Product
+                {
+                    ProductId = p.ProductId,
+                    Name = p.Name,
+                    Price = p.Price,
+                    Quantity = p.Quantity,
+                    CategoryId = p.CategoryId,
+                    SupplierId = p.SupplierId,
+                    CategoryName = p.Category.Name,
+                    SupplierName = p.Supplier.Name
+                })
+                .ToListAsync();
 
-    return Ok(products);
-}
+            return Ok(products);
+        }
 
+        // GET: api/products/{id} - Retrieve a single product by ID
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
         {
-            // Include both Category and Supplier relationships and map to ProductDto
             var product = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Supplier)
@@ -70,25 +68,18 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
             return Ok(product);
         }
 
-        // POST: api/products
+        // POST: api/products - Create a new product
         [HttpPost]
         public async Task<ActionResult<Product>> PostProduct(ProductDto productDto)
         {
-            // Fetch the Category and Supplier based on the provided IDs
             var category = await _context.Categories.FindAsync(productDto.CategoryId);
             var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
 
-            if (category == null)
+            if (category == null || supplier == null)
             {
-                return BadRequest("Invalid Category ID");
+                return BadRequest("Invalid Category ID or Supplier ID");
             }
 
-            if (supplier == null)
-            {
-                return BadRequest("Invalid Supplier ID");
-            }
-
-            // Map DTO to Product entity
             var product = new Product
             {
                 Name = productDto.Name,
@@ -96,19 +87,16 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
                 Price = productDto.Price,
                 Quantity = productDto.Quantity,
                 CategoryId = productDto.CategoryId,
-                SupplierId = productDto.SupplierId,
-                Category = category,
-                Supplier = supplier
+                SupplierId = productDto.SupplierId
             };
 
-            // Add the product and save changes
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
         }
 
-        // POST: api/products/bulk
+        // POST: api/products/bulk - Create products in bulk
         [HttpPost("bulk")]
         public async Task<ActionResult<IEnumerable<Product>>> PostProductsInBulk(IEnumerable<ProductDto> productDtos)
         {
@@ -116,21 +104,14 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
 
             foreach (var productDto in productDtos)
             {
-                // Fetch the Category and Supplier based on the provided IDs
                 var category = await _context.Categories.FindAsync(productDto.CategoryId);
                 var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
 
-                if (category == null)
+                if (category == null || supplier == null)
                 {
-                    return BadRequest($"Invalid Category ID: {productDto.CategoryId}");
+                    return BadRequest("Invalid Category ID or Supplier ID");
                 }
 
-                if (supplier == null)
-                {
-                    return BadRequest($"Invalid Supplier ID: {productDto.SupplierId}");
-                }
-
-                // Map DTO to Product entity
                 var product = new Product
                 {
                     Name = productDto.Name,
@@ -138,54 +119,41 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
                     Price = productDto.Price,
                     Quantity = productDto.Quantity,
                     CategoryId = productDto.CategoryId,
-                    SupplierId = productDto.SupplierId,
-                    Category = category,
-                    Supplier = supplier
+                    SupplierId = productDto.SupplierId
                 };
 
                 products.Add(product);
             }
 
-            // Add the products and save changes in one transaction
             _context.Products.AddRange(products);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetProducts), products);
         }
 
-
-
-        // PUT: api/products/{id}
+        // PUT: api/products/{id} - Update a single product
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, ProductDto productDto)
         {
             if (id != productDto.ProductId)
             {
-                return BadRequest();
+                return BadRequest("Product ID mismatch");
             }
 
-            // Fetch the Category and Supplier based on the provided IDs
-            var category = await _context.Categories.FindAsync(productDto.CategoryId);
-            var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
-
-            if (category == null)
-            {
-                return BadRequest("Invalid Category ID");
-            }
-
-            if (supplier == null)
-            {
-                return BadRequest("Invalid Supplier ID");
-            }
-
-            // Find the existing product
             var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
                 return NotFound();
             }
 
-            // Update product fields
+            var category = await _context.Categories.FindAsync(productDto.CategoryId);
+            var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
+
+            if (category == null || supplier == null)
+            {
+                return BadRequest("Invalid Category ID or Supplier ID");
+            }
+
             product.Name = productDto.Name;
             product.Description = productDto.Description;
             product.Price = productDto.Price;
@@ -194,27 +162,12 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
             product.SupplierId = productDto.SupplierId;
 
             _context.Entry(product).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Products.Any(p => p.ProductId == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        // PUT: api/products/bulk-update
+        // PUT: api/products/bulk-update - Update products in bulk
         [HttpPut("bulk-update")]
         public async Task<IActionResult> UpdateProductsInBulk(IEnumerable<ProductDto> productDtos)
         {
@@ -239,27 +192,16 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
                     product.Quantity = productDto.Quantity;
                     product.CategoryId = productDto.CategoryId;
                     product.SupplierId = productDto.SupplierId;
-                    // Update other fields as necessary
                 }
             }
 
             _context.Products.UpdateRange(productsToUpdate);
+            await _context.SaveChangesAsync();
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                return BadRequest($"Failed to update products: {ex.Message}");
-            }
-
-            return NoContent(); // or return Ok() if you prefer to send a response back
+            return NoContent();
         }
 
-
-
-        // DELETE: api/products/{id}
+        // DELETE: api/products/{id} - Delete a product
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
@@ -276,3 +218,4 @@ public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         }
     }
 }
+
