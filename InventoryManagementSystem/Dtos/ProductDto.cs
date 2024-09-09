@@ -8,5 +8,6 @@
         public int Quantity { get; set; }
         public int CategoryId { get; set; }  // Only CategoryId is needed
         public int SupplierId { get; set; }  // Only SupplierId is needed
+
     }
 }

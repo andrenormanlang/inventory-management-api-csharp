@@ -38,7 +38,8 @@ builder.Services.AddControllers();
 // Configure JSON options to handle object cycles (ReferenceHandler.Preserve)
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+    // Prevent circular references by ignoring them, instead of adding metadata
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
 // Enable CORS

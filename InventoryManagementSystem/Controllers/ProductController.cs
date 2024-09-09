@@ -19,30 +19,55 @@ namespace InventoryManagementSystem.Controllers
 
         // GET: api/products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+{
+    // Include both Category and Supplier relationships and map to ProductDto
+    var products = await _context.Products
+        .Include(p => p.Category)
+        .Include(p => p.Supplier)
+        .Select(p => new Product
         {
-            // Include both Category and Supplier relationships
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.Supplier)
-                .ToListAsync();
-        }
+            ProductId = p.ProductId,
+            Name = p.Name,
+            Price = p.Price,
+            Quantity = p.Quantity,
+            CategoryId = p.CategoryId,
+            SupplierId = p.SupplierId,
+            // You can extend DTOs with extra details, such as category or supplier names if needed.
+            CategoryName = p.Category.Name,
+            SupplierName = p.Supplier.Name
+        })
+        .ToListAsync();
 
-        // GET: api/products/{id}
+    return Ok(products);
+}
+
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
         {
-            // Include both Category and Supplier relationships
+            // Include both Category and Supplier relationships and map to ProductDto
             var product = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Supplier)
+                .Select(p => new Product
+                {
+                    ProductId = p.ProductId,
+                    Name = p.Name,
+                    Price = p.Price,
+                    Quantity = p.Quantity,
+                    CategoryId = p.CategoryId,
+                    SupplierId = p.SupplierId,
+                    CategoryName = p.Category.Name,
+                    SupplierName = p.Supplier.Name
+                })
                 .FirstOrDefaultAsync(p => p.ProductId == id);
 
             if (product == null)
             {
                 return NotFound();
             }
-            return product;
+
+            return Ok(product);
         }
 
         // POST: api/products
