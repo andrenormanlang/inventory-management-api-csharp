@@ -64,7 +64,7 @@ namespace InventoryManagementSystem.Controllers
 
             if (product == null)
             {
-                return NotFound();
+                return NotFound(new { message = $"Product with ID {id} not found." });
             }
 
             return Ok(product);
@@ -77,9 +77,14 @@ namespace InventoryManagementSystem.Controllers
             var category = await _context.Categories.FindAsync(productDto.CategoryId);
             var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
 
-            if (category == null || supplier == null)
+            if (category == null)
             {
-                return BadRequest("Invalid Category ID or Supplier ID");
+                return BadRequest(new { message = $"Invalid Category ID: {productDto.CategoryId}. Category does not exist." });
+            }
+
+            if (supplier == null)
+            {
+                return BadRequest(new { message = $"Invalid Supplier ID: {productDto.SupplierId}. Supplier does not exist." });
             }
 
             var product = new Product
@@ -109,9 +114,14 @@ namespace InventoryManagementSystem.Controllers
                 var category = await _context.Categories.FindAsync(productDto.CategoryId);
                 var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
 
-                if (category == null || supplier == null)
+                if (category == null)
                 {
-                    return BadRequest("Invalid Category ID or Supplier ID");
+                    return BadRequest(new { message = $"Invalid Category ID: {productDto.CategoryId} for product: {productDto.Name}. Category does not exist." });
+                }
+
+                if (supplier == null)
+                {
+                    return BadRequest(new { message = $"Invalid Supplier ID: {productDto.SupplierId} for product: {productDto.Name}. Supplier does not exist." });
                 }
 
                 var product = new Product
@@ -139,21 +149,26 @@ namespace InventoryManagementSystem.Controllers
         {
             if (id != productDto.ProductId)
             {
-                return BadRequest("Product ID mismatch");
+                return BadRequest(new { message = "Product ID mismatch." });
             }
 
             var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
-                return NotFound();
+                return NotFound(new { message = $"Product with ID {id} not found." });
             }
 
             var category = await _context.Categories.FindAsync(productDto.CategoryId);
             var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
 
-            if (category == null || supplier == null)
+            if (category == null)
             {
-                return BadRequest("Invalid Category ID or Supplier ID");
+                return BadRequest(new { message = $"Invalid Category ID: {productDto.CategoryId}. Category does not exist." });
+            }
+
+            if (supplier == null)
+            {
+                return BadRequest(new { message = $"Invalid Supplier ID: {productDto.SupplierId}. Supplier does not exist." });
             }
 
             product.Name = productDto.Name;
@@ -169,40 +184,6 @@ namespace InventoryManagementSystem.Controllers
             return NoContent();
         }
 
-        // PUT: api/products/bulk-update - Update products in bulk
-        [HttpPut("bulk-update")]
-        public async Task<IActionResult> UpdateProductsInBulk(IEnumerable<ProductDto> productDtos)
-        {
-            var ids = productDtos.Select(p => p.ProductId).ToList();
-            var productsToUpdate = await _context.Products
-                .Where(p => ids.Contains(p.ProductId))
-                .ToListAsync();
-
-            if (productsToUpdate.Count != productDtos.Count())
-            {
-                return BadRequest("Some product IDs did not match any existing products.");
-            }
-
-            foreach (var productDto in productDtos)
-            {
-                var product = productsToUpdate.FirstOrDefault(p => p.ProductId == productDto.ProductId);
-                if (product != null)
-                {
-                    product.Name = productDto.Name;
-                    product.Description = productDto.Description;
-                    product.Price = productDto.Price;
-                    product.Quantity = productDto.Quantity;
-                    product.CategoryId = productDto.CategoryId;
-                    product.SupplierId = productDto.SupplierId;
-                }
-            }
-
-            _context.Products.UpdateRange(productsToUpdate);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
         // DELETE: api/products/{id} - Delete a product
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
@@ -210,7 +191,7 @@ namespace InventoryManagementSystem.Controllers
             var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
-                return NotFound();
+                return NotFound(new { message = $"Product with ID {id} not found." });
             }
 
             _context.Products.Remove(product);
@@ -220,4 +201,3 @@ namespace InventoryManagementSystem.Controllers
         }
     }
 }
-
