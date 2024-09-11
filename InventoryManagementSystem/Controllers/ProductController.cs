@@ -114,6 +114,11 @@ namespace InventoryManagementSystem.Controllers
                 var category = await _context.Categories.FindAsync(productDto.CategoryId);
                 var supplier = await _context.Suppliers.FindAsync(productDto.SupplierId);
 
+                if (productDto.Description.Length > 10000)
+                {
+                    return BadRequest("Description cannot exceed 10,000 characters.");
+                }
+
                 if (category == null)
                 {
                     return BadRequest(new { message = $"Invalid Category ID: {productDto.CategoryId} for product: {productDto.Name}. Category does not exist." });

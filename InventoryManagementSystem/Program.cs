@@ -42,7 +42,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
-// Enable CORS
+// Enable CORS to allow requests from Blazor client
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
@@ -88,7 +88,7 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// Enable CORS
+// Enable CORS with the configured policy
 app.UseCors("AllowBlazorClient");
 
 app.UseRouting();
