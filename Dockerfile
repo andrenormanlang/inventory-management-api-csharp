@@ -1,21 +1,25 @@
-# Use the official .NET SDK image for building the application (targeting .NET 8)
+# Use the official .NET SDK image to build the application (targeting .NET 8)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
-# Copy the project file and restore any dependencies (via NuGet)
-COPY *.csproj ./
-RUN dotnet restore
+# Copy the project file (adjust path to InventoryManagementSystem folder)
+COPY InventoryManagementSystem/*.csproj ./InventoryManagementSystem/
 
-# Copy the entire source code and build the project
-COPY . ./
-RUN dotnet publish -c Release -o out
+# Restore any dependencies
+RUN dotnet restore InventoryManagementSystem/InventoryManagementSystem.csproj
 
-# Use the official .NET runtime image for running the app (targeting .NET 8)
+# Copy the entire source code to the container
+COPY . .
+
+# Build the project
+RUN dotnet publish InventoryManagementSystem/InventoryManagementSystem.csproj -c Release -o out
+
+# Use the official .NET runtime image to run the app
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build-env /app/out .
 
-# Set environment variables
+# Set environment variables if needed
 ENV ASPNETCORE_URLS=http://+:5000
 ENV ASPNETCORE_ENVIRONMENT=Production
 
