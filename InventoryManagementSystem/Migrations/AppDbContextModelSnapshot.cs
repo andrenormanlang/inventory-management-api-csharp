@@ -47,10 +47,6 @@ namespace InventoryManagementSystem.Migrations
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
-                    b.Property<string>("CategoryName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -67,10 +63,6 @@ namespace InventoryManagementSystem.Migrations
 
                     b.Property<int>("SupplierId")
                         .HasColumnType("int");
-
-                    b.Property<string>("SupplierName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
 
                     b.HasKey("ProductId");
 
