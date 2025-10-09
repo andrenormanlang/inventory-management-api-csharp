@@ -1,8 +1,26 @@
 using InventoryManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// If ASPNETCORE_URLS isn't explicitly set, prefer the platform provided port (PORT or HTTP_PORTS)
+// This ensures hosting platforms (Render, Heroku, etc.) that provide a port via env var work correctly.
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    var portEnv = Environment.GetEnvironmentVariable("PORT") ?? Environment.GetEnvironmentVariable("HTTP_PORTS");
+    if (!string.IsNullOrEmpty(portEnv))
+    {
+        // HTTP_PORTS may contain multiple values separated by ; or , - pick the first token
+        var port = portEnv.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)[0];
+        if (!string.IsNullOrWhiteSpace(port))
+        {
+            // Bind to all addresses on the chosen port
+            builder.WebHost.UseUrls($"http://+:{port}");
+        }
+    }
+}
 
 // Fetch the DATABASE_URL environment variable
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -96,6 +114,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// If the app runs behind a proxy/load balancer (Render, etc.), use forwarded headers so HTTPS & client IP are detected correctly
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
