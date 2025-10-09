@@ -123,7 +123,17 @@ using (var scope = app.Services.CreateScope())
     {
         var db = services.GetRequiredService<AppDbContext>();
         logger.LogInformation("Applying database migrations...");
-        db.Database.Migrate();
+
+        // Try to migrate, but if migrations fail, ensure database is created
+        try
+        {
+            db.Database.Migrate();
+        }
+        catch (Exception migrationEx)
+        {
+            logger.LogWarning(migrationEx, "Migration failed, attempting to ensure database is created...");
+            db.Database.EnsureCreated();
+        }
 
         logger.LogInformation("Seeding database (if required)...");
         Seeding.SeedDataAsync(db).GetAwaiter().GetResult();

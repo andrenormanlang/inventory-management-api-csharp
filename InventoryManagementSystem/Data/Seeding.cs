@@ -129,11 +129,16 @@ namespace InventoryManagementSystem.Data
         /// </summary>
         public static async Task SeedDataAsync(AppDbContext context)
         {
-            // Check if data already exists
-            if (await context.Categories.AnyAsync()) return;
+            try
+            {
+                // Ensure the database and tables exist
+                await context.Database.EnsureCreatedAsync();
 
-            // Add Categories
-            var categories = new List<Category>
+                // Check if data already exists
+                if (await context.Categories.AnyAsync()) return;
+
+                // Add Categories
+                var categories = new List<Category>
             {
                 new Category { Name = "Smartphones" },
                 new Category { Name = "Laptops & Computers" },
@@ -149,11 +154,11 @@ namespace InventoryManagementSystem.Data
                 new Category { Name = "Networking" }
             };
 
-            await context.Categories.AddRangeAsync(categories);
-            await context.SaveChangesAsync();
+                await context.Categories.AddRangeAsync(categories);
+                await context.SaveChangesAsync();
 
-            // Add Suppliers
-            var suppliers = new List<Supplier>
+                // Add Suppliers
+                var suppliers = new List<Supplier>
             {
                 new Supplier("Apple Inc.", "One Apple Park Way, Cupertino, CA 95014", "+1-408-996-1010"),
                 new Supplier("Samsung Electronics", "1321 Upland Dr, Houston, TX 77043", "+1-800-726-7864"),
@@ -172,15 +177,15 @@ namespace InventoryManagementSystem.Data
                 new Supplier("JBL/Harman International", "8500 Balboa Blvd, Northridge, CA 91329", "+1-818-893-8411")
             };
 
-            await context.Suppliers.AddRangeAsync(suppliers);
-            await context.SaveChangesAsync();
+                await context.Suppliers.AddRangeAsync(suppliers);
+                await context.SaveChangesAsync();
 
-            // Refresh categories and suppliers with their IDs
-            var categoryList = await context.Categories.ToListAsync();
-            var supplierList = await context.Suppliers.ToListAsync();
+                // Refresh categories and suppliers with their IDs
+                var categoryList = await context.Categories.ToListAsync();
+                var supplierList = await context.Suppliers.ToListAsync();
 
-            // Add a sample of products with proper foreign keys
-            var products = new List<Product>
+                // Add a sample of products with proper foreign keys
+                var products = new List<Product>
             {
                 // Smartphones
                 new Product { Name = "iPhone 15 Pro Max", Price = 1199.99, Quantity = 25, Description = "Latest Apple flagship with titanium design, A17 Pro chip, and advanced camera system", CategoryId = categoryList.First(c => c.Name == "Smartphones").CategoryId, SupplierId = supplierList.First(s => s.Name == "Apple Inc.").Id },
@@ -195,8 +200,14 @@ namespace InventoryManagementSystem.Data
                 new Product { Name = "Xbox Series X", Price = 499.99, Quantity = 10, Description = "Most powerful Xbox console with 4K gaming", CategoryId = categoryList.First(c => c.Name == "Gaming").CategoryId, SupplierId = supplierList.First(s => s.Name == "Microsoft Corporation").Id }
             };
 
-            await context.Products.AddRangeAsync(products);
-            await context.SaveChangesAsync();
+                await context.Products.AddRangeAsync(products);
+                await context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or handle it appropriately
+                throw new InvalidOperationException("Failed to seed database data", ex);
+            }
         }
     }
 }
