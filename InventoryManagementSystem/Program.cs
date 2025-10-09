@@ -9,27 +9,62 @@ var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (!string.IsNullOrEmpty(databaseUrl))
 {
-    // Parse the DATABASE_URL
-    var uri = new Uri(databaseUrl);
-    var username = uri.UserInfo.Split(':')[0];
-    var password = uri.UserInfo.Split(':')[1];
-    var host = uri.Host;
-    var port = uri.Port;
-    var database = uri.AbsolutePath.Trim('/');
+    // If DATABASE_URL starts with postgres or postgresql, configure PostgreSQL (Neon)
+    if (databaseUrl.StartsWith("postgres://") || databaseUrl.StartsWith("postgresql://"))
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo[0];
+        var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.Trim('/');
 
-    // Build MySQL connection string
-    var connectionString = $"Server={host};Port={port};Database={database};User={username};Password={password};";
+        // Convert query parameters (e.g. sslmode, channel_binding) into Npgsql-friendly keys
+        var additionalOptions = string.Empty;
+        if (!string.IsNullOrEmpty(uri.Query))
+        {
+            var q = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var kv in q)
+            {
+                var parts = kv.Split('=', 2);
+                var key = parts[0].ToLowerInvariant();
+                var value = parts.Length > 1 ? parts[1] : string.Empty;
+                if (key == "sslmode")
+                {
+                    additionalOptions += $"Ssl Mode={value};";
+                }
+                else if (key == "channel_binding")
+                {
+                    // Npgsql uses 'ChannelBinding' verbatim
+                    additionalOptions += $"ChannelBinding={value};";
+                }
+                else
+                {
+                    additionalOptions += $"{key}={value};";
+                }
+            }
+        }
 
-    // Use this connection string in DbContext configuration
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 21))));
+        // Build PostgreSQL connection string for Npgsql
+        var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};{additionalOptions}Trust Server Certificate=true;";
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(connectionString));
+    }
+    else
+    {
+        // If DATABASE_URL is set but not postgres, attempt to use it as a raw connection string for Npgsql
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(databaseUrl));
+    }
 }
 else
 {
-    // Fallback to default connection string from appsettings.json if DATABASE_URL is not set
+    // Fallback to default connection string from appsettings.json and use Npgsql provider
+    var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"),
-        new MySqlServerVersion(new Version(8, 0, 21))));
+        options.UseNpgsql(defaultConn));
 }
 
 // Add services to the container
