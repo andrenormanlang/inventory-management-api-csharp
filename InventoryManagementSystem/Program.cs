@@ -1,7 +1,9 @@
 using InventoryManagementSystem.Models;
+using InventoryManagementSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -111,6 +113,29 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Apply EF Core migrations and seed data at startup
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var db = services.GetRequiredService<AppDbContext>();
+        logger.LogInformation("Applying database migrations...");
+        db.Database.Migrate();
+
+        logger.LogInformation("Seeding database (if required)...");
+        Seeding.SeedDataAsync(db).GetAwaiter().GetResult();
+
+        logger.LogInformation("Database migration and seeding completed.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        throw; // Fail fast so the deploy logs show the problem
+    }
+}
 
 // Forwarded headers for proxy scenarios
 app.UseForwardedHeaders(new ForwardedHeadersOptions
