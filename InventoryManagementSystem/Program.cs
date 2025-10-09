@@ -6,23 +6,28 @@ using Microsoft.AspNetCore.HttpOverrides;
 var builder = WebApplication.CreateBuilder(args);
 
 // If ASPNETCORE_URLS isn't explicitly set, prefer the platform provided port (PORT or HTTP_PORTS)
+// This ensures hosting platforms (Render, Heroku, etc.) that provide a port via env var work correctly.
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
     var portEnv = Environment.GetEnvironmentVariable("PORT") ?? Environment.GetEnvironmentVariable("HTTP_PORTS");
     if (!string.IsNullOrEmpty(portEnv))
     {
+        // HTTP_PORTS may contain multiple values separated by ; or , - pick the first token
         var port = portEnv.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)[0];
         if (!string.IsNullOrWhiteSpace(port))
         {
+            // Bind to all addresses on the chosen port
             builder.WebHost.UseUrls($"http://+:{port}");
         }
     }
 }
 
-// Database configuration (unchanged)
+// Fetch the DATABASE_URL environment variable
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+
 if (!string.IsNullOrEmpty(databaseUrl))
 {
+    // If DATABASE_URL starts with postgres or postgresql, configure PostgreSQL (Neon)
     if (databaseUrl.StartsWith("postgres://") || databaseUrl.StartsWith("postgresql://"))
     {
         var uri = new Uri(databaseUrl);
@@ -33,6 +38,7 @@ if (!string.IsNullOrEmpty(databaseUrl))
         var port = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.Trim('/');
 
+        // Convert query parameters (e.g. sslmode, channel_binding) into Npgsql-friendly keys
         var additionalOptions = string.Empty;
         if (!string.IsNullOrEmpty(uri.Query))
         {
@@ -48,6 +54,7 @@ if (!string.IsNullOrEmpty(databaseUrl))
                 }
                 else if (key == "channel_binding")
                 {
+                    // Npgsql uses 'ChannelBinding' verbatim
                     additionalOptions += $"ChannelBinding={value};";
                 }
                 else
@@ -57,6 +64,7 @@ if (!string.IsNullOrEmpty(databaseUrl))
             }
         }
 
+        // Build PostgreSQL connection string for Npgsql
         var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};{additionalOptions}Trust Server Certificate=true;";
 
         builder.Services.AddDbContext<AppDbContext>(options =>
@@ -64,12 +72,14 @@ if (!string.IsNullOrEmpty(databaseUrl))
     }
     else
     {
+        // If DATABASE_URL is set but not postgres, attempt to use it as a raw connection string for Npgsql
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(databaseUrl));
     }
 }
 else
 {
+    // Fallback to default connection string from appsettings.json and use Npgsql provider
     var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(defaultConn));
@@ -110,6 +120,17 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
+
+// Enable Swagger UI/JSON in Development or when SWAGGER_ENABLED=true
+if (app.Environment.IsDevelopment() || Environment.GetEnvironmentVariable("SWAGGER_ENABLED") == "true")
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+        c.RoutePrefix = "swagger"; // serve at /swagger
+    });
+}
 
 // Conditional HTTPS redirection (only if platform HTTPS port provided)
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT")))
