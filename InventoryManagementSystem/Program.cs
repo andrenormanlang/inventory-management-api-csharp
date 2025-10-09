@@ -85,15 +85,12 @@ else
         options.UseNpgsql(defaultConn));
 }
 
-// Register MVC controllers and Razor Pages
-builder.Services.AddControllers();
-builder.Services.AddRazorPages();
-
-// JSON options
-builder.Services.AddControllers().AddJsonOptions(options =>
+// Register MVC controllers with views and Razor Pages
+builder.Services.AddControllersWithViews().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
+builder.Services.AddRazorPages();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -146,7 +143,8 @@ app.UseCors("AllowBlazorClient");
 app.UseRouting();
 app.UseAuthorization();
 
-// Map Razor Pages and controllers
+// Map MVC controller route, Razor Pages and API controllers
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
 app.MapControllers();
 
