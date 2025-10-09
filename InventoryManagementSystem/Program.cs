@@ -121,30 +121,12 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+// only call HTTPS redirection when the platform HTTPS port is provided
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT")))
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-        c.RoutePrefix = string.Empty; // To serve the Swagger UI at the app's root
-    });
-}
-else
-{
-    app.UseExceptionHandler(errorApp =>
-    {
-        errorApp.Run(async context =>
-        {
-            context.Response.StatusCode = 500;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync("{\"error\": \"An unexpected error occurred.\"}");
-        });
-    });
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 // Enable CORS with the configured policy
