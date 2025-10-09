@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using InventoryManagementSystem.Models;
+using InventoryManagementSystem.Data;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using InventoryManagementSystem.Dtos;
+using InventoryManagementSystem.Data.Dtos;
 
 namespace InventoryManagementSystem.Controllers
 {
