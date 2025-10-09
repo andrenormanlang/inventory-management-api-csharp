@@ -6,28 +6,23 @@ using Microsoft.AspNetCore.HttpOverrides;
 var builder = WebApplication.CreateBuilder(args);
 
 // If ASPNETCORE_URLS isn't explicitly set, prefer the platform provided port (PORT or HTTP_PORTS)
-// This ensures hosting platforms (Render, Heroku, etc.) that provide a port via env var work correctly.
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
     var portEnv = Environment.GetEnvironmentVariable("PORT") ?? Environment.GetEnvironmentVariable("HTTP_PORTS");
     if (!string.IsNullOrEmpty(portEnv))
     {
-        // HTTP_PORTS may contain multiple values separated by ; or , - pick the first token
         var port = portEnv.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)[0];
         if (!string.IsNullOrWhiteSpace(port))
         {
-            // Bind to all addresses on the chosen port
             builder.WebHost.UseUrls($"http://+:{port}");
         }
     }
 }
 
-// Fetch the DATABASE_URL environment variable
+// Database configuration (unchanged)
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-
 if (!string.IsNullOrEmpty(databaseUrl))
 {
-    // If DATABASE_URL starts with postgres or postgresql, configure PostgreSQL (Neon)
     if (databaseUrl.StartsWith("postgres://") || databaseUrl.StartsWith("postgresql://"))
     {
         var uri = new Uri(databaseUrl);
@@ -38,7 +33,6 @@ if (!string.IsNullOrEmpty(databaseUrl))
         var port = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.Trim('/');
 
-        // Convert query parameters (e.g. sslmode, channel_binding) into Npgsql-friendly keys
         var additionalOptions = string.Empty;
         if (!string.IsNullOrEmpty(uri.Query))
         {
@@ -54,7 +48,6 @@ if (!string.IsNullOrEmpty(databaseUrl))
                 }
                 else if (key == "channel_binding")
                 {
-                    // Npgsql uses 'ChannelBinding' verbatim
                     additionalOptions += $"ChannelBinding={value};";
                 }
                 else
@@ -64,7 +57,6 @@ if (!string.IsNullOrEmpty(databaseUrl))
             }
         }
 
-        // Build PostgreSQL connection string for Npgsql
         var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};{additionalOptions}Trust Server Certificate=true;";
 
         builder.Services.AddDbContext<AppDbContext>(options =>
@@ -72,30 +64,28 @@ if (!string.IsNullOrEmpty(databaseUrl))
     }
     else
     {
-        // If DATABASE_URL is set but not postgres, attempt to use it as a raw connection string for Npgsql
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(databaseUrl));
     }
 }
 else
 {
-    // Fallback to default connection string from appsettings.json and use Npgsql provider
     var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(defaultConn));
 }
 
-// Add services to the container
+// Register MVC controllers and Razor Pages
 builder.Services.AddControllers();
+builder.Services.AddRazorPages();
 
-// Configure JSON options to handle object cycles (ReferenceHandler.Preserve)
+// JSON options
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    // Prevent circular references by ignoring them, instead of adding metadata
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
-// Enable CORS to allow requests from Blazor client
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
@@ -106,7 +96,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Swagger/OpenAPI configuration
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -115,24 +105,31 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// If the app runs behind a proxy/load balancer (Render, etc.), use forwarded headers so HTTPS & client IP are detected correctly
+// Forwarded headers for proxy scenarios
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-// only call HTTPS redirection when the platform HTTPS port is provided
+// Conditional HTTPS redirection (only if platform HTTPS port provided)
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT")))
 {
     app.UseHttpsRedirection();
 }
 
+// Static files
 app.UseStaticFiles();
 
-// Enable CORS with the configured policy
+// CORS, routing, auth
 app.UseCors("AllowBlazorClient");
-
 app.UseRouting();
 app.UseAuthorization();
+
+// Map Razor Pages and controllers
+app.MapRazorPages();
 app.MapControllers();
+
+// Optionally serve a fallback page if you have one (uncomment if needed)
+// app.MapFallbackToPage("/Index");
+
 app.Run();
