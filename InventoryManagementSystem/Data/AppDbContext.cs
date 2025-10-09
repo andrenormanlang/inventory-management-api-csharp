@@ -15,6 +15,8 @@ namespace InventoryManagementSystem.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             // Configuring one-to-many relationship between Supplier and Product
             modelBuilder.Entity<Supplier>()
                 .HasMany(s => s.Products)
@@ -26,6 +28,9 @@ namespace InventoryManagementSystem.Data
                 .HasMany(c => c.Products)
                 .WithOne(p => p.Category)
                 .HasForeignKey(p => p.CategoryId);
+
+            // Include compile-time seed data so HasData entries are included in migrations
+            Seeding.SeedDatabase(modelBuilder);
         }
     }
 }

@@ -7,9 +7,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Remove="Data\Migrations\**" />
 		<Compile Remove="NewFolder1\**" />
+		<Content Remove="Data\Migrations\**" />
 		<Content Remove="NewFolder1\**" />
+		<EmbeddedResource Remove="Data\Migrations\**" />
 		<EmbeddedResource Remove="NewFolder1\**" />
+		<None Remove="Data\Migrations\**" />
 		<None Remove="NewFolder1\**" />
 	</ItemGroup>
 
@@ -24,7 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Data\Migrations\" />
+	  <Folder Include="Migrations\" />
 	</ItemGroup>
 
 </Project>
